@@ -12,7 +12,7 @@ jobs:
         with:
           dotnet-version: '6.0.x'
 
-      - uses: create csproj
+      - name: create csproj
         run: >
           find .diralive
   
