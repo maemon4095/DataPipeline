@@ -14,5 +14,7 @@ jobs:
 
       - name: create csproj
         run: >
-          find . -name '.diralive' 2>/dev/null | xargs dirname
-  
+          find . -name '.diralive' 2>/dev/null | 
+          xargs dirname |
+          cd |
+          dotnet new classlib 
