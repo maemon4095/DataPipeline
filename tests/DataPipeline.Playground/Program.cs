@@ -4,9 +4,10 @@ using System.Collections.Immutable;
 Console.WriteLine("Hello, World!");
 
 
-struct Pipeline<TIn, TOut>
+struct Pipeline<TIn>
 {
-
+    IPipelineInput<TIn> Input;
+    ImmutableArray<object> Output;
 }
 
 interface IPipelineInput<TIn>
@@ -23,17 +24,16 @@ interface IPipelineOutput<TOut>
 //バイパスになる．キャッシュはバイパスが定数関数であるパターン．バイパスと考えるとその後続の結果を知らないといけない．
 class CacheNode<TIn, TOut> : IPipelineInput<TIn>, IPipelineOutput<TOut>
 {
-    public CacheNode(IEnumerable<(IPipelineInput<TOut>, IImmutableDictionary<TIn, TOut>)> followings)
+    public CacheNode(Pipeline<TIn> following, IEqualityComparer<TIn> comparer)
     {
-        this.followings = followings.ToImmutableArray();
+        this.following = following; 
+        this.dictionary = new Dictionary<TIn, TOut>(comparer);
     }
-    readonly ImmutableArray<(IPipelineInput<TOut>, IImmutableDictionary<TIn, TOut>)> followings;
+    readonly Pipeline<TIn> following;
+    readonly IDictionary<TIn, TOut> dictionary;
     public void Receive(TIn input)
     {
-        foreach (var (following, dictionary) in this.followings.AsSpan())
-        {
-            
-        }
+
     }
     public IPipelineOutput<TOut> Connected(IPipelineInput<TOut> following) => throw new NotImplementedException();
 }
