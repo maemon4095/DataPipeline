@@ -14,5 +14,5 @@ jobs:
 
       - name: create csproj
         run: >
-          find .diralive
+          find . -name '.diralive' 2>/dev/null
   
