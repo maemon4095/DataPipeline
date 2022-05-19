@@ -1,5 +1,4 @@
-﻿// See https://aka.ms/new-console-template for more information
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 
 Console.WriteLine("Hello, World!");
 
@@ -18,6 +17,44 @@ interface IPipelineInput<TIn>
 interface IPipelineOutput<TOut>
 {
     public IPipelineOutput<TOut> Connected(IPipelineInput<TOut> following);
+}
+
+class BypassNode<TIn, TOut> : IPipelineInput<TIn>, IPipelineOutput<TOut>
+{
+    private BypassNode(IEqualityComparer<TIn> comparer, IPipelineInput<TIn> input, ImmutableArray<IPipelineInput<TOut>> followings)
+    {
+        this.input = input;
+        this.followings = followings;
+        this.cache = new Dictionary<TIn, TOut>(comparer);
+    }
+
+    readonly IPipelineInput<TIn> input;
+    readonly ImmutableArray<IPipelineInput<TOut>> followings;
+    readonly IDictionary<TIn, TOut> cache;
+
+    public void Receive(TIn input)
+    {
+        if(this.cache.TryGetValue(input, out var result))
+        {
+            foreach(var following in this.followings)
+            {
+                following.Receive(result);
+            }
+        }
+        else
+        {
+            this.input.Receive(input);
+        }
+    }
+
+    public IPipelineOutput<TOut> Connected(IPipelineInput<TOut> following)
+    {
+        return new BypassNode<TIn, TOut>(
+            this.cache.Comparer,
+            this.input.Connected(following),
+            this.followings.Add(following)
+        );
+    }
 }
 
 
