@@ -23,62 +23,30 @@ interface IPipelineJoint<TIn, TOut> : IPipelineInput<TIn>, IPipelineOutput<TOut>
     new public IPipelineJoint<TIn, TOut> Connected(IPipelineInput<TOut> following);
 }
 
-//複数経路の分岐と合併で表現できる。バイパスはメインになる経路とサブ経路を与える
-class BypassNode<TIn, TOut> : IPipelineInput<TIn>, IPipelineOutput<TOut>
+//キャッシュノードは結果を受け取る必要がある。Receiveに副作用を持たせる必要がある。
+
+class MergeNode<TOut> : IPipelineOutput<TOut>
 {
-    private BypassNode(IEqualityComparer<TIn> comparer, IPipelineInput<TIn> input, ImmutableArray<IPipelineInput<TOut>> followings)
+    public MergeNode(ImmutableArray<IPipelineOutput<TOut>> outputs)
     {
-        this.input = input;
-        this.followings = followings;
-        this.cache = new Dictionary<TIn, TOut>(comparer);
+        this.outputs = outputs;
     }
 
-    readonly IPipelineInput<TIn> input;
-    readonly ImmutableArray<IPipelineInput<TOut>> followings;
-    readonly IDictionary<TIn, TOut> cache;
-
-    public void Receive(TIn input)
-    {
-        if(this.cache.TryGetValue(input, out var result))
-        {
-            foreach(var following in this.followings)
-            {
-                following.Receive(result);
-            }
-        }
-        else
-        {
-            this.input.Receive(input);
-        }
-    }
+    ImmutableArray<IPipelineOutput<TOut>> outputs;
 
     public IPipelineOutput<TOut> Connected(IPipelineInput<TOut> following)
     {
-        return new BypassNode<TIn, TOut>(
-            this.cache.Comparer,
-            this.input.Connected(following),
-            this.followings.Add(following)
+        var builder = ImmutableArray.CreateBuilder(this.outputs.Length);
+        foreach(var output in this.outputs)
+        {
+            builder.Add(output.Connected(following));
+        }
+
+        return new MergeNode(
+            builder.ToImmutable()
         );
     }
-}
-
-
-//バイパスになる．キャッシュはバイパスが定数関数であるパターン．バイパスと考えるとその後続の結果を知らないといけない．
-class CacheNode<TIn, TOut> : IPipelineInput<TIn>, IPipelineOutput<TOut>
-{
-    public CacheNode(Pipeline<TIn> following, IEqualityComparer<TIn> comparer)
-    {
-        this.following = following; 
-        this.dictionary = new Dictionary<TIn, TOut>(comparer);
-    }
-    readonly Pipeline<TIn> following;
-    readonly IDictionary<TIn, TOut> dictionary;
-    public void Receive(TIn input)
-    {
-
-    }
-    public IPipelineOutput<TOut> Connected(IPipelineInput<TOut> following) => throw new NotImplementedException();
-}
+} 
 
 class TransformNode<TIn, TOut> : PipelineJoint<TIn, TOut>
 {
