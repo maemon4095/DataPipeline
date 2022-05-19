@@ -18,7 +18,12 @@ interface IPipelineOutput<TOut>
 {
     public IPipelineOutput<TOut> Connected(IPipelineInput<TOut> following);
 }
+interface IPipelineJoint<TIn, TOut> : IPipelineInput<TIn>, IPipelineOutput<TOut> {
+    IPipelineOutput<TOut>.Connected(IPipelineInput<TIn> following) => this.Connected(following);
+    new public IPipelineJoint<TIn, TOut> Connected(IPipelineInput<TOut> following);
+}
 
+//複数経路の分岐と合併で表現できる。バイパスはメインになる経路とサブ経路を与える
 class BypassNode<TIn, TOut> : IPipelineInput<TIn>, IPipelineOutput<TOut>
 {
     private BypassNode(IEqualityComparer<TIn> comparer, IPipelineInput<TIn> input, ImmutableArray<IPipelineInput<TOut>> followings)
